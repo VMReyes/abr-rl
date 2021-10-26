@@ -10,13 +10,13 @@ if __name__ == "__main__":
     terminals = []
     for session in logged_data:
         for step in session:
-            states.append(np.array(step[0:18]))
-            actions.append(np.array(step[18]))
-            rewards.append(np.array(step[19]))
+            states.append(np.array(step[0:19]))
+            actions.append(np.array(step[19]))
+            rewards.append(np.array(step[20]))
             terminals.append(np.array(step[-1]))
     states = np.array(states)
     actions = np.array(actions).astype(int)
-    print(actions)
+    print("what are actions:", actions, np.unique(actions), len(np.unique(actions)))
     rewards = np.array(rewards)
     terminals = np.array(terminals)
     dataset = d3rlpy.dataset.MDPDataset(states, actions, rewards, terminals)
