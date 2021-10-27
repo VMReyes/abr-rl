@@ -1,4 +1,5 @@
 import d3rlpy
+from d3rlpy import dataset
 import numpy as np
 
 LOGGED_DATA_FILES = ["data/bba_traj.npy",
@@ -8,7 +9,7 @@ LOGGED_DATA_FILES = ["data/bba_traj.npy",
                      "data/pess_rate_traj.npy",
                      "data/rate_traj.npy"]
 
-if __name__ == "__main__":
+def get_mdp_dataset_from_datafiles():
     states = []
     actions = []
     rewards = []
@@ -27,5 +28,10 @@ if __name__ == "__main__":
     rewards = np.array(rewards)
     terminals = np.array(terminals)
     dataset = d3rlpy.dataset.MDPDataset(states, actions, rewards, terminals)
+    return dataset
+
+
+if __name__ == "__main__":
+    dataset = get_mdp_dataset_from_datafiles()
     bcq = d3rlpy.algos.DiscreteBCQ()
     bcq.fit(dataset, n_epochs=2)
