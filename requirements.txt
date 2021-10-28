@@ -1,2 +1,4 @@
 d3rlpy
 six
+wget
+param
