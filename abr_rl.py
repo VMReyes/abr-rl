@@ -1,14 +1,16 @@
 import d3rlpy
 from d3rlpy import dataset
 import numpy as np
+from numpy.lib.function_base import average
 from env.abr import ABRSimEnv
+import csv
 
-LOGGED_DATA_FILES = ["data/bba_traj.npy"]
-                     #"data/bola_traj.npy",
-                     #"data/mpc_traj.npy",
-                     #"data/opt_rate_traj.npy",
-                     #"data/pess_rate_traj.npy",
-                     #"data/rate_traj.npy"]
+LOGGED_DATA_FILES = ["data/bba_traj.npy",
+                     "data/bola_traj.npy",
+                     "data/mpc_traj.npy",
+                     "data/opt_rate_traj.npy",
+                     "data/pess_rate_traj.npy",
+                     "data/rate_traj.npy"]
 
 def get_mdp_dataset_from_datafiles():
     states = []
@@ -46,11 +48,11 @@ def evaluate_agent(agent):
     print('Setting up environment..')
     env = ABRSimEnv()
 
-    # Shorthand for number of actions
-    act_len = env.action_space.n
-
     # Number of traces we intend to run through, more gives us a better evaluation
     num_traces = 10
+
+    cumulative_rewards_history = []
+    average_rewards_history = []
 
     for _ in range(num_traces):
         # Done in reset: Randomly choose a trace and starting point in it
@@ -68,19 +70,38 @@ def evaluate_agent(agent):
             rews.append(rew)
 
             # Print some statistics
-            print(f'At chunk {t}, the agent took action {act}, and got a reward {rew}')
-            print(f'\t\tThe observation was {obs}')
+            #print(f'At chunk {t}, the agent took action {act}, and got a reward {rew}')
+            #print(f'\t\tThe observation was {obs}')
 
             # Going forward: the next state at point t becomes the current state at point t+1
             obs = next_obs
             t += 1
-        print(f'Got cumulative reward: {np.sum(rews)}, average reward: {np.average(rews)}.')
+        cumulative_reward = np.sum(rews)
+        average_reward = np.average(rews)
+        print(f'Got cumulative reward: {cumulative_reward}, average reward: {average_reward}.')
+        cumulative_rewards_history.append(cumulative_reward)
+        average_rewards_history.append(average_reward)
+    return {"algorithm": str(agent),
+            "average_cumulative_reward": np.average(cumulative_rewards_history),
+            "average_average_reward": np.average(average_rewards_history)}
+
+def sweep_epochs_and_algorithms(epochs_to_try):
+    dataset = get_mdp_dataset_from_datafiles()
+    bcq = d3rlpy.algos.DiscreteBCQ()
+    awr = d3rlpy.algos.DiscreteAWR()
+    cql = d3rlpy.algos.DiscreteCQL()
+    algorithms = [bcq, awr, cql]
+    for algorithm in algorithms:
+        for epochs in epochs_to_try:
+            algorithm.fit(dataset, n_epochs=epochs)
+            eval_result = evaluate_agent(algorithm)
+            with open('sweep_results.csv', 'a') as resultsfile:
+                results_writer = csv.writer(resultsfile)
+                results_writer.writerow([eval_result["algorithm"],
+                                         epochs,
+                                         eval_result["average_average_reward"],
+                                         eval_result["average_cumulative_reward"]])
 
 
 if __name__ == "__main__":
-    dataset = get_mdp_dataset_from_datafiles()
-    bcq = d3rlpy.algos.DiscreteBCQ()
-    bcq.build_with_dataset(dataset)
-    #bcq.fit(dataset, n_epochs=1)
-    bcq.load_model("/home/vmreyes/abr-rl/d3rlpy_logs/DiscreteBCQ_20211027151005/model_183375.pt")
-    evaluate_agent(bcq)
+    sweep_epochs_and_algorithms()
