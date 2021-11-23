@@ -25,6 +25,10 @@ if __name__ == "__main__":
     config = a3c.DEFAULT_CONFIG.copy()
     config["num_gpus"] = 0
     config["num_workers"] = 1
+    config["lr"] = 1e-2
+    config["lambda"] = 0.96
+    config["gamma"] = 0.96
+
     trainer = a3c.A2CTrainer(config=config, env=myEnv)
     for i in range(100):
         result = trainer.train()
