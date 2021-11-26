@@ -25,11 +25,12 @@ def evaluate_agent(agent):
         done = False
         t = 0
         rews = []
-        metrics = {"action": [], "buffer_length": [], "action_bitrate": [], "download_time": []}
+        metrics = {"action": [], "buffer_length": [], "action_bitrate": [], "download_time": [], "throughput": []}
         while not done:
             # Choose an action through random policy
             act = agent.predict(obs[np.newaxis, :]).item()
-            metrics["download_time"].append(sum(obs[4:9] / 5)) # avg download time
+            metrics["throughput"].append(sum(obs[0:4]) / 5) # avg throughput
+            metrics["download_time"].append(sum(obs[4:9]) / 5) # avg download time
             metrics['buffer_length'].append(obs[10])
             metrics['action'].append(act)
             metrics['action_bitrate'].append(obs[13+act])
@@ -50,27 +51,34 @@ def evaluate_agent(agent):
 
 def plot_trajectory(trajectory, agent_name):
     buffer_history = trajectory["buffer_length"]
-    plt.subplot(411)
+    plt.subplot(511)
     plt.plot(buffer_history)
     plt.title("Buffer Length over Time")
 
     action_history = trajectory["action"]
-    plt.subplot(412)
+    plt.subplot(512)
     plt.plot(action_history)
     plt.title("Action Choice over Time")
 
     action_bitrate_history = trajectory["action_bitrate"]
-    plt.subplot(413)
+    plt.subplot(513)
     plt.plot(action_bitrate_history)
     plt.title("Bitrate Choice over Time")
 
+
     download_history = trajectory["download_time"]
-    plt.subplot(414)
+    plt.subplot(514)
     plt.plot(download_history)
     plt.title("Download Time over Time")
 
+    throughput_history = trajectory["throughput"]
+    plt.subplot(515)
+    plt.plot(throughput_history)
+    plt.title("Throughput over Time")
+
     plt.tight_layout(pad=1.0)
     plt.savefig("output/latest_trajectory_{}.png".format(agent_name))
+    plt.close()
 
 
 def average_trajectory(trajectories, field):
@@ -83,6 +91,7 @@ def average_trajectory(trajectories, field):
         avg[i] /= len(trajectories)
     
     return avg
+
 def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
     cql_avg_buffer_length = average_trajectory(cql_trajectories, "buffer_length")
     bcq_avg_buffer_length = average_trajectory(bcq_trajectories, "buffer_length")
@@ -93,20 +102,28 @@ def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
     cql_avg_download_time = average_trajectory(cql_trajectories, "download_time")
     bcq_avg_download_time = average_trajectory(bcq_trajectories, "download_time")
 
-    plt.subplot(311)
+    cql_avg_throughput = average_trajectory(cql_trajectories, "throughput")
+    bcq_avg_throughput = average_trajectory(bcq_trajectories, "throughput")
+
+    plt.subplot(411)
     plt.plot(cql_avg_buffer_length, label="cql")
     plt.plot(bcq_avg_buffer_length, label="bcq")
-    plt.title("Buffer Length over Time")
+    plt.title("Average Buffer Length over Time")
 
-    plt.subplot(312)
+    plt.subplot(412)
     plt.plot(cql_avg_action_bitrate, label="cql")
     plt.plot(bcq_avg_action_bitrate, label="bcq")
-    plt.title("Bitrate Choice over Time")
+    plt.title("Average Bitrate Choice over Time")
 
-    plt.subplot(313)
+    plt.subplot(413)
     plt.plot(cql_avg_download_time, label="cql")
     plt.plot(bcq_avg_download_time, label="bcq")
-    plt.title("Download Time over Time")
+    plt.title("Average Download Time over Time")
+
+    plt.subplot(414)
+    plt.plot(cql_avg_throughput, label="cql")
+    plt.plot(bcq_avg_throughput, label="bcq")
+    plt.plot("Average Throughput over Time")
 
     plt.tight_layout(pad=1.0)
     plt.legend()
@@ -161,7 +178,9 @@ if __name__ == "__main__":
 
 
     plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
-    # plot_trajectory(cql_trajectories[0], "cql")
+    plot_trajectory(cql_trajectories[0], "cql")
+    plot_trajectory(bcq_trajectories[0], "bcq")
+
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
 
