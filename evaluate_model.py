@@ -1,12 +1,13 @@
 import d3rlpy
 from d3rlpy import dataset
+from d3rlpy.algos.bcq import BCQ
 import numpy as np
 import csv
+
+from wget import download
 from env.abr import ABRSimEnv
 import matplotlib.pyplot as plt
 
-# MODEL_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211115220329/model_8950.pt"
-MODEL_WEIGHTS = "d3rlpy_logs/DiscreteBCQ_20211115222009/model_8950.pt"
 
 def evaluate_agent(agent):
     # Launch ABR environment
@@ -24,10 +25,11 @@ def evaluate_agent(agent):
         done = False
         t = 0
         rews = []
-        metrics = {"action": [], "buffer_length": [], "action_bitrate": [], "file_size": []}
+        metrics = {"action": [], "buffer_length": [], "action_bitrate": [], "download_time": []}
         while not done:
             # Choose an action through random policy
             act = agent.predict(obs[np.newaxis, :]).item()
+            metrics["download_time"].append(sum(obs[4:9] / 5)) # avg download time
             metrics['buffer_length'].append(obs[10])
             metrics['action'].append(act)
             metrics['action_bitrate'].append(obs[13+act])
@@ -46,26 +48,72 @@ def evaluate_agent(agent):
         trajectories.append(metrics)
     return trajectories
 
-def plot_trajectory(trajectory):
+def plot_trajectory(trajectory, agent_name):
     buffer_history = trajectory["buffer_length"]
-    plt.subplot(311)
+    plt.subplot(411)
     plt.plot(buffer_history)
     plt.title("Buffer Length over Time")
 
     action_history = trajectory["action"]
-    plt.subplot(312)
+    plt.subplot(412)
     plt.plot(action_history)
     plt.title("Action Choice over Time")
 
     action_bitrate_history = trajectory["action_bitrate"]
-    plt.subplot(313)
+    plt.subplot(413)
     plt.plot(action_bitrate_history)
     plt.title("Bitrate Choice over Time")
 
-    plt.tight_layout(pad=1.0)
-    plt.savefig("output/latest_trajectory_bcq.png")
+    download_history = trajectory["download_time"]
+    plt.subplot(414)
+    plt.plot(download_history)
+    plt.title("Download Time over Time")
 
-def plot_avg_trajectory_metrics(trajectories):
+    plt.tight_layout(pad=1.0)
+    plt.savefig("output/latest_trajectory_{}.png".format(agent_name))
+
+
+def average_trajectory(trajectories, field):
+    avg = [0 for _ in range(490)]
+    for t in trajectories:
+        buffer_history = t[field]
+        for i in range(len(buffer_history)):
+            avg[i] += buffer_history[i]
+    for i in range(490):
+        avg[i] /= len(trajectories)
+    
+    return avg
+def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
+    cql_avg_buffer_length = average_trajectory(cql_trajectories, "buffer_length")
+    bcq_avg_buffer_length = average_trajectory(bcq_trajectories, "buffer_length")
+
+    cql_avg_action_bitrate = average_trajectory(cql_trajectories, "action_bitrate")
+    bcq_avg_action_bitrate = average_trajectory(bcq_trajectories, "action_bitrate")
+
+    cql_avg_download_time = average_trajectory(cql_trajectories, "download_time")
+    bcq_avg_download_time = average_trajectory(bcq_trajectories, "download_time")
+
+    plt.subplot(311)
+    plt.plot(cql_avg_buffer_length, label="cql")
+    plt.plot(bcq_avg_buffer_length, label="bcq")
+    plt.title("Buffer Length over Time")
+
+    plt.subplot(312)
+    plt.plot(cql_avg_action_bitrate, label="cql")
+    plt.plot(bcq_avg_action_bitrate, label="bcq")
+    plt.title("Bitrate Choice over Time")
+
+    plt.subplot(313)
+    plt.plot(cql_avg_download_time, label="cql")
+    plt.plot(bcq_avg_download_time, label="bcq")
+    plt.title("Download Time over Time")
+
+    plt.tight_layout(pad=1.0)
+    plt.legend()
+    plt.savefig("output/trajectory_overlay.png")
+
+
+def plot_avg_trajectory_metrics(trajectories, agent_name):
     num_trajectories = len(trajectories)
     avg_buffer_length = [0 for _ in range(490)]
     avg_bitrate_history = [0 for _ in range(490)]
@@ -92,7 +140,7 @@ def plot_avg_trajectory_metrics(trajectories):
     plt.title("Average Trajectory Bitrate Choice over Time")
 
     plt.tight_layout(pad=1.0)
-    plt.savefig("output/average_trajectory_cql.png")
+    plt.savefig("output/average_trajectory_{}.png".format(agent_name))
     
 
 
@@ -100,11 +148,20 @@ def plot_avg_trajectory_metrics(trajectories):
 
 
 if __name__ == "__main__":
-    # model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211115220329/params.json")
-    model = d3rlpy.algos.DiscreteBCQ.from_json("d3rlpy_logs/DiscreteBCQ_20211115222009/params.json")
-    model.load_model(MODEL_WEIGHTS)
-    trajectories = evaluate_agent(model)
-    plot_trajectory(trajectories[0])
-    # plot_avg_trajectory_metrics(trajectories)
+    cql_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211115220329/params.json")
+    CQL_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211115220329/model_8950.pt"
+
+    bcq_model = d3rlpy.algos.DiscreteBCQ.from_json("d3rlpy_logs/DiscreteBCQ_20211115222009/params.json")
+    BCQ_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteBCQ_20211115222009/model_8950.pt"
+
+    cql_model.load_model(CQL_MODEL_WEIGHTS)
+    cql_trajectories = evaluate_agent(cql_model)
+    bcq_model.load_model(BCQ_MODEL_WEIGHTS)
+    bcq_trajectories = evaluate_agent(bcq_model)
+
+
+    plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
+    # plot_trajectory(cql_trajectories[0], "cql")
+    # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
 
