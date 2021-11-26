@@ -25,7 +25,12 @@ def evaluate_agent(agent):
         done = False
         t = 0
         rews = []
-        metrics = {"action": [], "buffer_length": [], "action_bitrate": [], "download_time": [], "throughput": []}
+        metrics = {"action": [],
+                    "buffer_length": [],
+                    "action_bitrate": [],
+                    "download_time": [],
+                    "throughput": [],
+                    "reward": []}
         while not done:
             # Choose an action through random policy
             act = agent.predict(obs[np.newaxis, :]).item()
@@ -38,6 +43,8 @@ def evaluate_agent(agent):
             # Take the action
             next_obs, rew, done, info = env.step(act)
             rews.append(rew)
+
+            metrics["reward"].append(rew)
 
             # Print some statistics
             #print(f'At chunk {t}, the agent took action {act}, and got a reward {rew}')
@@ -105,25 +112,33 @@ def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
     cql_avg_throughput = average_trajectory(cql_trajectories, "throughput")
     bcq_avg_throughput = average_trajectory(bcq_trajectories, "throughput")
 
-    plt.subplot(411)
+    cql_avg_reward = average_trajectory(cql_trajectories, "reward")
+    bcq_avg_reward = average_trajectory(bcq_trajectories, "reward")
+
+    plt.subplot(511)
     plt.plot(cql_avg_buffer_length, label="cql")
     plt.plot(bcq_avg_buffer_length, label="bcq")
     plt.title("Average Buffer Length over Time")
 
-    plt.subplot(412)
+    plt.subplot(512)
     plt.plot(cql_avg_action_bitrate, label="cql")
     plt.plot(bcq_avg_action_bitrate, label="bcq")
     plt.title("Average Bitrate Choice over Time")
 
-    plt.subplot(413)
+    plt.subplot(513)
     plt.plot(cql_avg_download_time, label="cql")
     plt.plot(bcq_avg_download_time, label="bcq")
     plt.title("Average Download Time over Time")
 
-    plt.subplot(414)
+    plt.subplot(514)
     plt.plot(cql_avg_throughput, label="cql")
     plt.plot(bcq_avg_throughput, label="bcq")
     plt.title("Average Throughput over Time")
+
+    plt.subplot(515)
+    plt.plot(cql_avg_reward, label="cql")
+    plt.plot(bcq_avg_reward, label="bcq")
+    plt.title("Average QoE over Time")
 
     plt.tight_layout(pad=1.0)
     plt.legend()
