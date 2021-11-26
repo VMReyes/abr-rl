@@ -123,7 +123,7 @@ def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
     plt.subplot(414)
     plt.plot(cql_avg_throughput, label="cql")
     plt.plot(bcq_avg_throughput, label="bcq")
-    plt.plot("Average Throughput over Time")
+    plt.title("Average Throughput over Time")
 
     plt.tight_layout(pad=1.0)
     plt.legend()
@@ -178,8 +178,8 @@ if __name__ == "__main__":
 
 
     plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
-    plot_trajectory(cql_trajectories[0], "cql")
-    plot_trajectory(bcq_trajectories[0], "bcq")
+    # plot_trajectory(cql_trajectories[0], "cql")
+    # plot_trajectory(bcq_trajectories[0], "bcq")
 
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
