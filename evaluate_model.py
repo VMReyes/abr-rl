@@ -8,8 +8,12 @@ from wget import download
 from env.abr import ABRSimEnv
 import matplotlib.pyplot as plt
 
+import ray
+import ray.rllib.agents.ppo as ppo
+from train_baseline import myEnv
 
-def evaluate_agent(agent):
+
+def evaluate_agent(agent, ppo = False):
     # Launch ABR environment
     print('Setting up environment..')
     env = ABRSimEnv()
@@ -33,7 +37,14 @@ def evaluate_agent(agent):
         cumulative_reward = 0
         while not done:
             # Choose an action through random policy
-            act = agent.predict(obs[np.newaxis, :]).item()
+            if ppo:
+                obs_normalized = obs / np.array([1e6, 1e6, 1e6, 1e6, 1e6,
+                                                 1, 1, 1, 1, 1,
+                                                 40, 490, 6,
+                                                 1e6, 1e6, 1e6, 1e6, 1e6, 1e6])
+                act = agent.compute_action(obs_normalized)
+            else:
+                act = agent.predict(obs[np.newaxis, :]).item()
             metrics["throughput"].append(sum(obs[0:4]) / 5) # avg throughput
             metrics["download_time"].append(sum(obs[4:9]) / 5) # avg download time
             metrics['buffer_length'].append(obs[10])
@@ -57,37 +68,37 @@ def evaluate_agent(agent):
 
 def plot_trajectory(trajectory, agent_name):
     buffer_history = trajectory["buffer_length"]
-    plt.subplot(611)
+    plt.subplot(411)
     plt.plot(buffer_history)
     plt.title("Buffer Length over Time")
 
-    action_history = trajectory["action"]
-    plt.subplot(612)
-    plt.plot(action_history)
-    plt.title("Action Choice over Time")
+    #action_history = trajectory["action"]
+    #plt.subplot(612)
+    #plt.plot(action_history)
+    #plt.title("Action Choice over Time")
 
     action_bitrate_history = trajectory["action_bitrate"]
-    plt.subplot(613)
+    plt.subplot(412)
     plt.plot(action_bitrate_history)
     plt.title("Bitrate Choice over Time")
 
 
-    download_history = trajectory["download_time"]
-    plt.subplot(614)
-    plt.plot(download_history)
-    plt.title("Download Time over Time")
+    #download_history = trajectory["download_time"]
+    #plt.subplot(614)
+    #plt.plot(download_history)
+    #plt.title("Download Time over Time")
 
     throughput_history = trajectory["throughput"]
-    plt.subplot(615)
+    plt.subplot(413)
     plt.plot(throughput_history)
     plt.title("Throughput over Time")
 
     cumulative_reward_history = trajectory["reward"]
-    plt.subplot(616)
+    plt.subplot(414)
     plt.plot(cumulative_reward_history)
     plt.title("Cumulative Reward over Time")
     
-    plt.tight_layout(pad=2.0)
+    plt.tight_layout(pad=1.0)
     plt.savefig("output/latest_trajectory_{}.png".format(agent_name))
     plt.close()
 
@@ -202,15 +213,32 @@ if __name__ == "__main__":
     bcq_model = d3rlpy.algos.DiscreteBCQ.from_json("d3rlpy_logs/DiscreteBCQ_20211115222009/params.json")
     BCQ_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteBCQ_20211115222009/model_8950.pt"
 
+    ray.init()
+    config = ppo.DEFAULT_CONFIG.copy()
+    config["num_gpus"] = 0
+    config["num_workers"] = 1
+    config["lr"] = 1e-2
+    config["lambda"] = 0.96
+    config["gamma"] = 0.96
+    config["entropy_coeff_schedule"] = [(0, 0.2), (2500*490, 0.0)]
+    config["model"]["fcnet_hiddens"] = [64, 32]
+    config["model"]["fcnet_activation"] = "relu" 
+    config["rollout_fragment_length"] = 490
+
+    trainer = ppo.PPOTrainer(config=config, env=myEnv)
+    trainer.load_checkpoint("models/ppo/checkpoint_005201/checkpoint-5201")
+    ppo_trajectories = evaluate_agent(trainer, ppo=True)
+
     cql_model.load_model(CQL_MODEL_WEIGHTS)
     cql_trajectories = evaluate_agent(cql_model)
     bcq_model.load_model(BCQ_MODEL_WEIGHTS)
     bcq_trajectories = evaluate_agent(bcq_model)
 
 
-    plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
+    #plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
     plot_trajectory(cql_trajectories[0], "cql")
     plot_trajectory(bcq_trajectories[0], "bcq")
+    plot_trajectory(ppo_trajectories[0], "ppo")
 
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
