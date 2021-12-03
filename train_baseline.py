@@ -31,7 +31,7 @@ if __name__ == "__main__":
     config = ppo.DEFAULT_CONFIG.copy()
     config["num_gpus"] = 0
     config["num_workers"] = 1
-    config["lr"] = 1e-2
+    config["lr"] = 1e-3
     config["lambda"] = 0.96
     config["gamma"] = 0.96
     config["entropy_coeff_schedule"] = [(0, 0.2), (2500*490, 0.0)]
