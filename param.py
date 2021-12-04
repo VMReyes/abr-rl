@@ -42,4 +42,4 @@ parser.add_argument('--mpc_lookback', type=int, default=5,
 parser.add_argument('--mpc_lookahead', type=int, default=5,
                     help='MPC - Throughput lookahead (default: 5)')
 
-config = parser.parse_args()
+config, unknown = parser.parse_known_args()
