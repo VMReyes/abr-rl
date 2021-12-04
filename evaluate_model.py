@@ -12,8 +12,9 @@ import ray
 import ray.rllib.agents.ppo as ppo
 from train_baseline import myEnv
 
+from policies import BBAAgent
 
-def evaluate_agent(agent, ppo = False):
+def evaluate_agent(agent, ppo = False, bba = False):
     # Launch ABR environment
     print('Setting up environment..')
     env = ABRSimEnv()
@@ -43,6 +44,8 @@ def evaluate_agent(agent, ppo = False):
                                                  40, 490, 6,
                                                  1e6, 1e6, 1e6, 1e6, 1e6, 1e6])
                 act = agent.compute_action(obs_normalized)
+            elif bba:
+                act = agent.take_action(obs)
             else:
                 act = agent.predict(obs[np.newaxis, :]).item()
             metrics["throughput"].append(sum(obs[0:4]) / 5) # avg throughput
@@ -227,18 +230,21 @@ if __name__ == "__main__":
 
     trainer = ppo.PPOTrainer(config=config, env=myEnv)
     trainer.load_checkpoint("models/ppo/checkpoint_005201/checkpoint-5201")
-    ppo_trajectories = evaluate_agent(trainer, ppo=True)
+    #ppo_trajectories = evaluate_agent(trainer, ppo=True)
 
     cql_model.load_model(CQL_MODEL_WEIGHTS)
-    cql_trajectories = evaluate_agent(cql_model)
+    #cql_trajectories = evaluate_agent(cql_model)
     bcq_model.load_model(BCQ_MODEL_WEIGHTS)
-    bcq_trajectories = evaluate_agent(bcq_model)
+    #bcq_trajectories = evaluate_agent(bcq_model)
 
+    bba_agent = BBAAgent(env = ABRSimEnv())
+    bba_trajectories = evaluate_agent(bba_agent, bba=True)
 
     #plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
-    plot_trajectory(cql_trajectories[0], "cql")
-    plot_trajectory(bcq_trajectories[0], "bcq")
-    plot_trajectory(ppo_trajectories[0], "ppo")
+    #plot_trajectory(cql_trajectories[0], "cql")
+    #plot_trajectory(bcq_trajectories[0], "bcq")
+    #plot_trajectory(ppo_trajectories[0], "ppo")
+    plot_trajectory(bba_trajectories[0], "bba")
 
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 

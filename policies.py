@@ -39,6 +39,28 @@ class BBAAgent(Agent):
             act = max([i for i in range(self.act_n) if bitrate >= obs_np[2 * config.mpc_lookback+3+i]])
         return act
 
+class BBAAgentDefault(Agent):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.act_n = kwargs['env'].action_space.n
+        self.upper = 5 + 10
+        self.lower = 5
+
+    def take_action(self, obs_np):
+        lookback = 5
+        buffer_size = obs_np[2 * lookback]
+        if buffer_size < self.lower:
+            act = 0
+        elif buffer_size >= self.upper:
+            act = self.act_n - 1
+        else:
+            ratio = (buffer_size - self.lower) / float(self.upper - self.lower)
+            min_chunk = np.min(obs_np[2 * lookback+3:2 * lookback+3+self.act_n])
+            max_chunk = np.max(obs_np[2 * lookback+3:2 * lookback+3+self.act_n])
+            bitrate = ratio * (max_chunk - min_chunk) + min_chunk
+            act = max([i for i in range(self.act_n) if bitrate >= obs_np[2 * lookback+3+i]])
+        return act
+
 
 class BBAAgentMIX(Agent):
     def __init__(self, **kwargs):
