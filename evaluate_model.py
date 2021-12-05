@@ -119,32 +119,35 @@ def average_trajectory(trajectories, field):
         return avg[4:]
     return avg
 
-def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
+def plot_trajectory_overlay(cql_trajectories, bcq_trajectories, bba_trajectories):
     cql_avg_buffer_length = average_trajectory(cql_trajectories, "buffer_length")
     bcq_avg_buffer_length = average_trajectory(bcq_trajectories, "buffer_length")
 
     cql_avg_action_bitrate = average_trajectory(cql_trajectories, "action_bitrate")
     bcq_avg_action_bitrate = average_trajectory(bcq_trajectories, "action_bitrate")
-
+    bba_avg_action_bitrate = average_trajectory(bba_trajectories, "action_bitrate") 
 
     cql_avg_download_time = average_trajectory(cql_trajectories, "download_time")
     bcq_avg_download_time = average_trajectory(bcq_trajectories, "download_time")
 
     cql_avg_throughput = average_trajectory(cql_trajectories, "throughput")
     bcq_avg_throughput = average_trajectory(bcq_trajectories, "throughput")
+    bba_avg_throughput = average_trajectory(bba_trajectories, "throughput")
 
     cql_avg_reward = average_trajectory(cql_trajectories, "reward")
     bcq_avg_reward = average_trajectory(bcq_trajectories, "reward")
+    bba_avg_reward = average_trajectory(bba_trajectories, "reward")
 
     # plt.subplot(211)
     # plt.plot(cql_avg_buffer_length, label="cql")
     # plt.plot(bcq_avg_buffer_length, label="bcq")
     # plt.title("Average Buffer Length over Time")
 
-    plt.subplot(211)
-    plt.plot(cql_avg_action_bitrate, label="cql")
-    plt.plot(bcq_avg_action_bitrate, label="bcq")
-    plt.title("Average Bitrate Choice over Time")
+    # plt.subplot(211)
+    # plt.plot(cql_avg_action_bitrate, label="cql")
+    # plt.plot(bcq_avg_action_bitrate, label="bcq")
+    # plt.plot(bba_avg_action_bitrate, label="bba")
+    # plt.title("Average Bitrate Choice over Time")
 
     # plt.legend()
     # plt.tight_layout(pad=1.0)
@@ -156,23 +159,25 @@ def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
     # plt.plot(bcq_avg_download_time, label="bcq")
     # plt.title("Average Download Time over Time")
 
-    plt.subplot(212)
+    plt.subplot(211)
     plt.plot([i for i in range(5,491)], cql_avg_throughput, label="cql")
-    plt.plot(bcq_avg_throughput, label="bcq")
+    plt.plot([i for i in range(5,491)], bcq_avg_throughput, label="bcq")
+    plt.plot([i for i in range(5,491)], bba_avg_throughput, label="bba")
     plt.title("Average Throughput over Time")
-
-    plt.legend()
-    plt.tight_layout(pad=1.0)
-    plt.savefig("output/trajectory_overlay2.png")
-
-    # plt.subplot(515)
-    # plt.plot(cql_avg_reward, label="cql")
-    # plt.plot(bcq_avg_reward, label="bcq")
-    # plt.title("Average QoE over Time")
 
     # plt.legend()
     # plt.tight_layout(pad=1.0)
-    # plt.savefig("output/trajectory_overlay_all.png")
+    # plt.savefig("output/trajectory_overlay2.png")
+
+    plt.subplot(212)
+    plt.plot(cql_avg_reward, label="cql")
+    plt.plot(bcq_avg_reward, label="bcq")
+    plt.plot(bba_avg_reward, label="bba")
+    plt.title("Average QoE over Time")
+
+    plt.legend()
+    plt.tight_layout(pad=1.0)
+    plt.savefig("output/trajectory_overlay_all.png")
 
 
 def plot_avg_trajectory_metrics(trajectories, agent_name):
@@ -233,18 +238,18 @@ if __name__ == "__main__":
     #ppo_trajectories = evaluate_agent(trainer, ppo=True)
 
     cql_model.load_model(CQL_MODEL_WEIGHTS)
-    #cql_trajectories = evaluate_agent(cql_model)
+    cql_trajectories = evaluate_agent(cql_model)
     bcq_model.load_model(BCQ_MODEL_WEIGHTS)
-    #bcq_trajectories = evaluate_agent(bcq_model)
+    bcq_trajectories = evaluate_agent(bcq_model)
 
     bba_agent = BBAAgent(env = ABRSimEnv())
     bba_trajectories = evaluate_agent(bba_agent, bba=True)
 
-    #plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
+    plot_trajectory_overlay(cql_trajectories, bcq_trajectories, bba_trajectories)
     #plot_trajectory(cql_trajectories[0], "cql")
     #plot_trajectory(bcq_trajectories[0], "bcq")
     #plot_trajectory(ppo_trajectories[0], "ppo")
-    plot_trajectory(bba_trajectories[0], "bba")
+    # plot_trajectory(bba_trajectories[0], "bba")
 
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
