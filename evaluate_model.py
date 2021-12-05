@@ -211,7 +211,9 @@ def plot_avg_trajectory_metrics(trajectories, agent_name):
 
 if __name__ == "__main__":
     cql_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211115220329/params.json")
+    cql_alpha_0_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211204135430/params.json")
     CQL_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211115220329/model_8950.pt"
+    CQL_MODEL_ALPHA_0_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211204135430/model_8950.pt"
 
     bcq_model = d3rlpy.algos.DiscreteBCQ.from_json("d3rlpy_logs/DiscreteBCQ_20211115222009/params.json")
     BCQ_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteBCQ_20211115222009/model_8950.pt"
@@ -236,6 +238,8 @@ if __name__ == "__main__":
     #cql_trajectories = evaluate_agent(cql_model)
     bcq_model.load_model(BCQ_MODEL_WEIGHTS)
     #bcq_trajectories = evaluate_agent(bcq_model)
+    cql_alpha_0_model.load_model(CQL_MODEL_ALPHA_0_WEIGHTS)
+    #cql_alpha_0_trajectories = evaluate_agent(cql_alpha_0_model)
 
     bba_agent = BBAAgent(env = ABRSimEnv())
     bba_trajectories = evaluate_agent(bba_agent, bba=True)
