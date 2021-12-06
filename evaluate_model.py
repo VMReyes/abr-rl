@@ -20,7 +20,7 @@ def evaluate_agent(agent, ppo = False, bba = False):
     env = ABRSimEnv()
 
     # Number of traces we intend to run through, more gives us a better evaluation
-    num_traces = 25
+    num_traces = 200
 
     trajectories = []
 
@@ -56,8 +56,8 @@ def evaluate_agent(agent, ppo = False, bba = False):
 
             # Take the action
             next_obs, rew, done, info = env.step(act)
-            cumulative_reward += rew
-            metrics["reward"].append(cumulative_reward)
+            #cumulative_reward += rew
+            metrics["reward"].append(rew)
 
             # Print some statistics
             #print(f'At chunk {t}, the agent took action {act}, and got a reward {rew}')
