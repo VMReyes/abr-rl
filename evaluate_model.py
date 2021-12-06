@@ -119,62 +119,27 @@ def average_trajectory(trajectories, field):
         return avg[4:]
     return avg
 
-def plot_trajectory_overlay(cql_trajectories, bcq_trajectories):
-    cql_avg_buffer_length = average_trajectory(cql_trajectories, "buffer_length")
-    bcq_avg_buffer_length = average_trajectory(bcq_trajectories, "buffer_length")
+def plot_trajectory_overlay(trajectories, fields, fname):
+    '''
+    trajectories: list of [name, trajectories]
+    fields: list of field names to be overlayed
+    '''
 
-    cql_avg_action_bitrate = average_trajectory(cql_trajectories, "action_bitrate")
-    bcq_avg_action_bitrate = average_trajectory(bcq_trajectories, "action_bitrate")
-
-
-    cql_avg_download_time = average_trajectory(cql_trajectories, "download_time")
-    bcq_avg_download_time = average_trajectory(bcq_trajectories, "download_time")
-
-    cql_avg_throughput = average_trajectory(cql_trajectories, "throughput")
-    bcq_avg_throughput = average_trajectory(bcq_trajectories, "throughput")
-
-    cql_avg_reward = average_trajectory(cql_trajectories, "reward")
-    bcq_avg_reward = average_trajectory(bcq_trajectories, "reward")
-
-    # plt.subplot(211)
-    # plt.plot(cql_avg_buffer_length, label="cql")
-    # plt.plot(bcq_avg_buffer_length, label="bcq")
-    # plt.title("Average Buffer Length over Time")
-
-    plt.subplot(211)
-    plt.plot(cql_avg_action_bitrate, label="cql")
-    plt.plot(bcq_avg_action_bitrate, label="bcq")
-    plt.title("Average Bitrate Choice over Time")
-
-    # plt.legend()
-    # plt.tight_layout(pad=1.0)
-    # plt.savefig("output/trajectory_overlay1.png")
-
-    # start at fifth chunk for these readings
-    # plt.subplot(211)
-    # plt.plot([i for i in range(5,491)], cql_avg_download_time, label="cql")
-    # plt.plot(bcq_avg_download_time, label="bcq")
-    # plt.title("Average Download Time over Time")
-
-    plt.subplot(212)
-    plt.plot([i for i in range(5,491)], cql_avg_throughput, label="cql")
-    plt.plot(bcq_avg_throughput, label="bcq")
-    plt.title("Average Throughput over Time")
-
-    plt.legend()
-    plt.tight_layout(pad=1.0)
-    plt.savefig("output/trajectory_overlay2.png")
-
-    # plt.subplot(515)
-    # plt.plot(cql_avg_reward, label="cql")
-    # plt.plot(bcq_avg_reward, label="bcq")
-    # plt.title("Average QoE over Time")
-
-    # plt.legend()
-    # plt.tight_layout(pad=1.0)
-    # plt.savefig("output/trajectory_overlay_all.png")
-
-
+    fig, axs = plt.subplots(len(fields))
+    for i in range(len(fields)):
+        for t, name in trajectories:
+            field = fields[i]
+            data = average_trajectory(t, field)
+            if field == "throughput" or field == "download_time":
+                axs[i].plot([i for i in range(5,491)], data, label=name)
+            else:
+                axs[i].plot(data,label=name)
+            axs[i].set_title("Average {} Over Time".format(field))
+            axs[i].legend()
+    # fig.legend()
+    fig.tight_layout(pad=1.0)
+    fig.savefig("output/{}".format(fname))
+    
 def plot_avg_trajectory_metrics(trajectories, agent_name):
     num_trajectories = len(trajectories)
     avg_buffer_length = [0 for _ in range(490)]
@@ -212,6 +177,10 @@ def plot_avg_trajectory_metrics(trajectories, agent_name):
 if __name__ == "__main__":
     cql_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211115220329/params.json")
     CQL_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211115220329/model_8950.pt"
+    cql_alpha_0_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211204135430/params.json")
+    CQL_MODEL_ALPHA_0_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211204135430/model_8950.pt"
+    cql_alpha_10_model = d3rlpy.algos.DiscreteCQL.from_json("d3rlpy_logs/DiscreteCQL_20211205153019/params.json")
+    CQL_MODEL_ALPHA_10_WEIGHTS = "d3rlpy_logs/DiscreteCQL_20211205153019/model_8950.pt"
 
     bcq_model = d3rlpy.algos.DiscreteBCQ.from_json("d3rlpy_logs/DiscreteBCQ_20211115222009/params.json")
     BCQ_MODEL_WEIGHTS = "d3rlpy_logs/DiscreteBCQ_20211115222009/model_8950.pt"
@@ -230,22 +199,27 @@ if __name__ == "__main__":
 
     trainer = ppo.PPOTrainer(config=config, env=myEnv)
     trainer.load_checkpoint("models/ppo/checkpoint_005201/checkpoint-5201")
-    #ppo_trajectories = evaluate_agent(trainer, ppo=True)
+    ppo_trajectories = evaluate_agent(trainer, ppo=True)
 
     cql_model.load_model(CQL_MODEL_WEIGHTS)
-    #cql_trajectories = evaluate_agent(cql_model)
+    cql_trajectories = evaluate_agent(cql_model)
     bcq_model.load_model(BCQ_MODEL_WEIGHTS)
     #bcq_trajectories = evaluate_agent(bcq_model)
+    cql_alpha_0_model.load_model(CQL_MODEL_ALPHA_0_WEIGHTS)
+    cql_alpha_0_trajectories = evaluate_agent(cql_alpha_0_model)
+    cql_alpha_10_model.load_model(CQL_MODEL_ALPHA_10_WEIGHTS)
+    cql_alpha_10_trajectories = evaluate_agent(cql_alpha_10_model)
+    bcq_trajectories = evaluate_agent(bcq_model)
 
     bba_agent = BBAAgent(env = ABRSimEnv())
     bba_trajectories = evaluate_agent(bba_agent, bba=True)
 
-    #plot_trajectory_overlay(cql_trajectories, bcq_trajectories)
     #plot_trajectory(cql_trajectories[0], "cql")
     #plot_trajectory(bcq_trajectories[0], "bcq")
     #plot_trajectory(ppo_trajectories[0], "ppo")
-    plot_trajectory(bba_trajectories[0], "bba")
+    # plot_trajectory(bba_trajectories[0], "bba")
 
     # plot_avg_trajectory_metrics(cql_trajectories, "cql")
 
-
+    trajectories = [(cql_trajectories, "cql"), (bcq_trajectories, "bcq"), (bba_trajectories, "bba"), (ppo_trajectories, "ppo")]
+    plot_trajectory_overlay(trajectories, ["reward","throughput"], "trajectories.png")
